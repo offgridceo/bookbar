@@ -499,7 +499,7 @@
             el.addEventListener('contextmenu', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                // Right click delete options block inside custom context menu injection
+                // Right click options block inside custom context menu injection
                 showDeleteMenu(e, item.id);
             });
 
@@ -651,7 +651,6 @@
             contextMenu.style.left = `${e.clientX}px`;
             contextMenu.style.top = `${e.clientY}px`;
             
-            // Dynamic context configuration shifts base state items configuration profiles injection
             contextMenu.innerHTML = `
                 <div class="menu-item" onclick="openPrompt('folder', ${isInsideWindow})">New Folder</div>
                 <div class="menu-item" onclick="openPrompt('link', ${isInsideWindow})">New Bookmark</div>
@@ -665,18 +664,44 @@
             contextMenu.style.left = `${e.clientX}px`;
             contextMenu.style.top = `${e.clientY}px`;
             contextMenu.innerHTML = `
+                <div class="menu-item" onclick="openRenamePrompt('${id}')">Rename Entry</div>
+                <div class="menu-separator"></div>
                 <div class="menu-item" style="color:#ef4444;" onclick="deleteItem('${id}')">Purge Entry</div>
             `;
         }
 
+        function openRenamePrompt(id) {
+            const item = state.items.find(i => i.id === id);
+            if (!item) return;
+
+            activePromptType = 'rename';
+            promptOverlay.style.display = 'flex';
+            promptIn1.value = item.label;
+            promptIn2.style.display = 'none';
+            promptTitle.innerText = "Modify Entry Descriptor";
+            promptIn1.focus();
+
+            promptConfirm.onclick = function() {
+                const newLabel = promptIn1.value.trim();
+                if (!newLabel) return;
+                item.label = newLabel;
+                saveMemory();
+                closePrompt();
+                
+                renderCanvas();
+                if (item.parentId) {
+                    renderWindowContent(item.parentId, document.getElementById(`win-content-${item.parentId}`));
+                }
+                const activeWin = document.getElementById(`win-${item.id}`);
+                if (activeWin) activeWin.querySelector('.window-title').innerText = newLabel;
+            };
+        }
+
         function deleteItem(id) {
-            // Clean targeting constraints recursion loop deletion arrays verification
             state.items = state.items.filter(i => i.id !== id && i.parentId !== id);
             saveMemory();
             renderCanvas();
-            // Close container if dynamic target execution is a folder currently running active
             closeFolderWindow(id);
-            // Refresh potential tracking nested structures visually
             state.items.filter(i => i.type === 'folder').forEach(f => {
                 const contentEl = document.getElementById(`win-content-${f.id}`);
                 if(contentEl) renderWindowContent(f.id, contentEl);
@@ -700,6 +725,9 @@
             promptIn1.value = '';
             promptIn2.value = '';
 
+            // Restore the native click listener behavior for default execution paths
+            promptConfirm.onclick = executeCreation;
+
             if (type === 'folder') {
                 promptTitle.innerText = "Initialize Directory Cluster";
                 promptIn1.placeholder = "Folder Descriptor Tag";
@@ -715,9 +743,8 @@
 
         function closePrompt() { promptOverlay.style.display = 'none'; }
 
-        promptConfirm.addEventListener('click', executeCreation);
-        promptIn1.addEventListener('keydown', (e) => { if(e.key === 'Enter') executeCreation(); });
-        promptIn2.addEventListener('keydown', (e) => { if(e.key === 'Enter') executeCreation(); });
+        promptIn1.addEventListener('keydown', (e) => { if(e.key === 'Enter') promptConfirm.click(); });
+        promptIn2.addEventListener('keydown', (e) => { if(e.key === 'Enter') promptConfirm.click(); });
 
         function executeCreation() {
             const label = promptIn1.value.trim();
