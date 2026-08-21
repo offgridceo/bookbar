@@ -231,37 +231,6 @@
             transform: translate(-50%, -50%);
         }
 
-        /* --- HOVER PREVIEW SNAPSHOT CARD --- */
-        #hover-preview-card {
-            position: fixed;
-            pointer-events: none;
-            z-index: 2500;
-            display: none;
-            width: 250px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.85);
-            border-radius: 6px;
-            overflow: hidden;
-            flex-direction: column;
-        }
-        #hover-preview-card img {
-            width: 100%;
-            height: 135px;
-            object-fit: cover;
-            background: var(--bg-base);
-        }
-        #hover-preview-card .preview-footer {
-            padding: 8px 10px;
-            font-size: 10px;
-            color: var(--text-main);
-            background: var(--bg-element);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            border-top: 1px solid var(--border-color);
-        }
-
         /* --- CONTEXT MENU --- */
         #context-menu {
             position: absolute;
@@ -471,12 +440,6 @@
     <!-- Drag Proxy for Items Dragged Out of Window -->
     <div id="drag-proxy" class="desktop-item"></div>
 
-    <!-- Floating Automated Hover Preview Snapshot Window -->
-    <div id="hover-preview-card">
-        <img id="preview-card-img" src="" alt="Media Preview">
-        <div class="preview-footer" id="preview-card-label">Loading Snapshot...</div>
-    </div>
-
     <!-- Right-Click Action Context Menu -->
     <div id="context-menu">
         <div class="menu-item" onclick="openPrompt('folder')">New Folder</div>
@@ -580,9 +543,6 @@
         let folderHistoryStack = [];
         let creationTargetParentId = null;
 
-        let hoverTimer = null;
-        let activeHoverUrl = null;
-
         function initMemory() {
             const stored = localStorage.getItem('BOOKBAR_DATA');
             if (stored) {
@@ -618,9 +578,6 @@
         // --- CORE UI RENDERING ENGINE ---
         const canvas = document.getElementById('desktop-canvas');
         const dragProxy = document.getElementById('drag-proxy');
-        const previewCard = document.getElementById('hover-preview-card');
-        const previewCardImg = document.getElementById('preview-card-img');
-        const previewCardLabel = document.getElementById('preview-card-label');
 
         function generateIconHTML(item) {
             if (item.type === 'folder') {
@@ -668,17 +625,15 @@
             });
         }
 
-        // --- INTERACTION, DRAG-AND-DROP & HOVER PREVIEWS LOGIC ---
+        // --- INTERACTION & DRAG-AND-DROP LOGIC ---
         function attachItemEvents(el, item, insideWindow = false) {
             el.addEventListener('contextmenu', (e) => {
-                hideHoverPreview();
                 e.stopPropagation();
                 e.preventDefault();
                 showDeleteMenu(e, item.id);
             });
 
             el.addEventListener('mousedown', (e) => {
-                hideHoverPreview();
                 if (e.button !== 0) return; 
                 e.stopPropagation();
                 activeDragElement = item;
@@ -699,25 +654,11 @@
                 }
             });
 
-            el.addEventListener('mouseenter', (e) => {
-                if (item.type !== 'link' || activeDragElement) return;
-                
-                hoverTimer = setTimeout(() => {
-                    const rect = el.getBoundingClientRect();
-                    showHoverPreview(item, rect.right + 15, rect.top);
-                }, 200); // Fast 0.2s hover threshold
-            });
-
-            el.addEventListener('mouseleave', () => {
-                hideHoverPreview();
-            });
-
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
             });
 
             el.addEventListener('dblclick', (e) => {
-                hideHoverPreview();
                 e.stopPropagation();
                 if (item.type === 'folder') {
                     const singleWin = document.getElementById('single-system-window');
@@ -731,46 +672,6 @@
                     window.open(item.url, '_blank', 'noopener,noreferrer');
                 }
             });
-        }
-
-        async function showHoverPreview(item, x, y) {
-            if (!item.url) return;
-            activeHoverUrl = item.url;
-            
-            if (x + 260 > window.innerWidth) x = window.innerWidth - 270;
-            if (y + 180 > window.innerHeight) y = window.innerHeight - 190;
-
-            previewCard.style.left = `${x}px`;
-            previewCard.style.top = `${y}px`;
-            previewCard.style.display = 'flex';
-            
-            previewCardLabel.innerText = item.label;
-
-            // Extract high-res OpenGraph metadata thumbnail via Microlink API
-            try {
-                const apiRes = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(item.url)}`);
-                const json = await apiRes.json();
-                
-                if (activeHoverUrl !== item.url) return; // Prevent stale overwriting
-
-                if (json.status === 'success' && json.data.image && json.data.image.url) {
-                    previewCardImg.src = json.data.image.url;
-                    if (json.data.title) previewCardLabel.innerText = json.data.title;
-                } else {
-                    // Fallback to high-res favicon if OpenGraph image unavailable
-                    previewCardImg.src = `https://www.google.com/s2/favicons?sz=128&domain=${item.url}`;
-                }
-            } catch(e) {
-                if (activeHoverUrl === item.url) {
-                    previewCardImg.src = `https://www.google.com/s2/favicons?sz=128&domain=${item.url}`;
-                }
-            }
-        }
-
-        function hideHoverPreview() {
-            if (hoverTimer) clearTimeout(hoverTimer);
-            activeHoverUrl = null;
-            previewCard.style.display = 'none';
         }
 
         window.addEventListener('mousemove', (e) => {
@@ -1137,9 +1038,10 @@
 
             const cleanQuery = query.toLowerCase().trim().replace(/^#/, '');
 
+            // Filter across ALL bookmarks (root, folders, deep nested subfolders)
             const matches = state.items.filter(item => {
                 if (item.type !== 'link') return false;
-                if (!cleanQuery) return true;
+                if (!cleanQuery) return true; // Show all tagged links if query empty
 
                 const hasMatchingTag = item.tags && item.tags.some(t => t.toLowerCase().includes(cleanQuery));
                 const hasMatchingTitle = item.label.toLowerCase().includes(cleanQuery);
