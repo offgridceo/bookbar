@@ -306,6 +306,51 @@
             color: var(--accent);
         }
 
+        /* --- TAGS DRAWER / MODAL --- */
+        #tags-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.9);
+            width: 440px;
+            z-index: 160;
+            display: none;
+            flex-direction: column;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #tags-header {
+            padding: 12px 16px;
+            background: var(--bg-element);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        #tags-search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-base);
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+            font-family: var(--font-stack);
+        }
+        #tags-results-list {
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
         /* --- CONTROLS / SETTINGS SYSTEM --- */
         #corner-widgets {
             position: absolute;
@@ -409,6 +454,16 @@
         <div id="search-results"></div>
     </div>
 
+    <!-- Dedicated Visual Tags Finder Modal -->
+    <div id="tags-modal">
+        <div id="tags-header">
+            <span>Tag Search & Filter Engine</span>
+            <button class="window-close" onclick="toggleTagsModal(false)">✕</button>
+        </div>
+        <input type="text" id="tags-search-input" placeholder="Type tag descriptor... (e.g. hypno)" autocomplete="off">
+        <div id="tags-results-list"></div>
+    </div>
+
     <!-- Global Application Dynamic Prompt Engine -->
     <div id="prompt-overlay">
         <div class="prompt-card">
@@ -467,6 +522,7 @@
 
     <!-- UI Interaction Utilities Block -->
     <div id="corner-widgets">
+        <button class="widget-btn" onclick="toggleTagsModal(true)">Tags</button>
         <button class="widget-btn" onclick="toggleSettings(true)">Config</button>
     </div>
 
@@ -498,7 +554,7 @@
             } else {
                 state.items = [
                     { id: '1', type: 'folder', label: 'Development', x: 40, y: 40, parentId: null },
-                    { id: '2', type: 'link', label: 'GitHub', url: 'https://github.com', x: 40, y: 160, parentId: null }
+                    { id: '2', type: 'link', label: 'GitHub', url: 'https://github.com', x: 40, y: 160, parentId: null, tags: ['coding', 'git'] }
                 ];
             }
             applyConfig();
@@ -855,7 +911,7 @@
 
         window.addEventListener('click', (e) => { 
             contextMenu.style.display = 'none'; 
-            if (!e.target.closest('.window') && !e.target.closest('.desktop-item') && !e.target.closest('#prompt-overlay') && !e.target.closest('#context-menu') && !e.target.closest('#settings-modal')) {
+            if (!e.target.closest('.window') && !e.target.closest('.desktop-item') && !e.target.closest('#prompt-overlay') && !e.target.closest('#context-menu') && !e.target.closest('#settings-modal') && !e.target.closest('#tags-modal')) {
                 closeActiveWindow();
             }
         });
@@ -895,7 +951,8 @@
                 url: url,
                 parentId: parent,
                 x: parent ? 0 : spawnCoordinates.x,
-                y: parent ? 0 : spawnCoordinates.y
+                y: parent ? 0 : spawnCoordinates.y,
+                tags: []
             };
 
             state.items.push(newItem);
@@ -917,7 +974,8 @@
             
             let credsOptions = '';
             if (item && item.type === 'link') {
-                credsOptions = `<div class="menu-item" onclick="openCredentialsPrompt('${id}')">Manage Credentials</div>`;
+                credsOptions = `<div class="menu-item" onclick="openTagsPrompt('${id}')">Manage Tags</div>`;
+                credsOptions += `<div class="menu-item" onclick="openCredentialsPrompt('${id}')">Manage Credentials</div>`;
                 if (item.username) {
                     credsOptions += `<div class="menu-item" onclick="copyCreds('${id}', 'username')">Copy Username</div>`;
                 }
@@ -933,6 +991,91 @@
                 <div class="menu-separator"></div>
                 <div class="menu-item" style="color:#ef4444;" onclick="deleteItem('${id}')">Purge Entry</div>
             `;
+        }
+
+        // --- TAG MANAGEMENT & SEARCH DRAWER ---
+        function openTagsPrompt(id) {
+            const item = state.items.find(i => i.id === id);
+            if (!item) return;
+
+            promptOverlay.style.display = 'flex';
+            promptTitle.innerText = `Manage Tags: ${item.label}`;
+            promptIn1.value = item.tags ? item.tags.join(', ') : '';
+            promptIn1.placeholder = "Tags separated by commas (e.g. hypno, asmr)";
+            promptIn2.style.display = 'none';
+            promptIn1.focus();
+
+            promptConfirm.onclick = function() {
+                const rawVal = promptIn1.value.trim();
+                if (rawVal) {
+                    item.tags = rawVal.split(',').map(t => t.trim().toLowerCase().replace(/^#/, '')).filter(t => t.length > 0);
+                } else {
+                    item.tags = [];
+                }
+                saveMemory();
+                closePrompt();
+            };
+        }
+
+        function toggleTagsModal(show) {
+            const tagsModal = document.getElementById('tags-modal');
+            const searchInput = document.getElementById('tags-search-input');
+            tagsModal.style.display = show ? 'flex' : 'none';
+            if (show) {
+                searchInput.value = '';
+                renderTagsResults('');
+                searchInput.focus();
+            }
+        }
+
+        document.getElementById('tags-search-input').addEventListener('input', (e) => {
+            renderTagsResults(e.target.value);
+        });
+
+        function renderTagsResults(query) {
+            const resultsContainer = document.getElementById('tags-results-list');
+            resultsContainer.innerHTML = '';
+
+            const cleanQuery = query.toLowerCase().trim().replace(/^#/, '');
+
+            // Filter across ALL bookmarks (root, folders, deep nested subfolders)
+            const matches = state.items.filter(item => {
+                if (item.type !== 'link') return false;
+                if (!cleanQuery) return true; // Show all tagged links if query empty
+
+                const hasMatchingTag = item.tags && item.tags.some(t => t.toLowerCase().includes(cleanQuery));
+                const hasMatchingTitle = item.label.toLowerCase().includes(cleanQuery);
+                return hasMatchingTag || hasMatchingTitle;
+            });
+
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = `<div style="padding:16px; text-align:center; font-size:11px; color:var(--text-muted); text-transform:uppercase;">No tagged bookmarks found matching query</div>`;
+                return;
+            }
+
+            matches.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'search-result-item';
+                
+                const tagsBadges = (item.tags && item.tags.length > 0) 
+                    ? item.tags.map(t => `#${t}`).join(' ') 
+                    : 'no tags';
+
+                const favUrl = `https://www.google.com/s2/favicons?sz=64&domain=${item.url}`;
+
+                el.innerHTML = `
+                    <img src="${favUrl}" style="width:16px; height:16px; object-fit:contain;" onerror="this.style.display='none'">
+                    <span style="font-weight:500;">${item.label}</span>
+                    <span style="margin-left:auto; font-size:10px; color:var(--text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${tagsBadges}</span>
+                `;
+
+                el.addEventListener('click', () => {
+                    toggleTagsModal(false);
+                    window.open(item.url, '_blank', 'noopener,noreferrer');
+                });
+
+                resultsContainer.appendChild(el);
+            });
         }
 
         // --- ACCOUNT VAULT & CREDENTIALS ENGINE ---
@@ -1065,7 +1208,8 @@
                 label: label,
                 parentId: parent,
                 x: parent ? 0 : spawnCoordinates.x,
-                y: parent ? 0 : spawnCoordinates.y
+                y: parent ? 0 : spawnCoordinates.y,
+                tags: []
             };
 
             if (activePromptType === 'link') newItem.url = url;
@@ -1105,6 +1249,7 @@
             if (e.key === 'Escape') {
                 closeSearchPalette();
                 toggleSettings(false);
+                toggleTagsModal(false);
             }
         });
 
@@ -1117,7 +1262,8 @@
 
             filteredItems = state.items.filter(item => 
                 item.label.toLowerCase().includes(query) || 
-                (item.type === 'link' && item.url.toLowerCase().includes(query))
+                (item.type === 'link' && item.url.toLowerCase().includes(query)) ||
+                (item.tags && item.tags.some(t => t.toLowerCase().includes(query)))
             );
 
             if(filteredItems.length === 0) {
