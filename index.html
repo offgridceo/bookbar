@@ -82,6 +82,12 @@
             border: 1px solid var(--border-color);
         }
 
+        /* Drop Target Highlighting */
+        .desktop-item.drop-hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px dashed var(--accent) !important;
+        }
+
         /* Folder Aesthetic */
         .item-folder .icon-wrapper {
             width: 42px;
@@ -135,7 +141,7 @@
             color: var(--text-main);
         }
 
-        /* --- OS WINDOW / MODAL SYSTEM (DEEP NESTING) --- */
+        /* --- OS WINDOW / MODAL SYSTEM --- */
         .window {
             position: absolute;
             top: 15%;
@@ -158,6 +164,24 @@
             align-items: center;
             border-bottom: 1px solid var(--border-color);
             cursor: move;
+        }
+        .window-title-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .window-back-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .window-back-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
         }
         .window-title {
             font-size: 12px;
@@ -342,8 +366,10 @@
 </head>
 <body>
 
+    <!-- Main Active Canvas Layout -->
     <div id="desktop-canvas"></div>
 
+    <!-- Right-Click Action Context Menu -->
     <div id="context-menu">
         <div class="menu-item" onclick="openPrompt('folder')">New Folder</div>
         <div class="menu-item" onclick="openPrompt('link')">New Bookmark</div>
@@ -351,11 +377,13 @@
         <div class="menu-item" onclick="toggleSettings(true)">System Configurations</div>
     </div>
 
+    <!-- Omnipresent Command Palette / Quick Lookup -->
     <div id="search-palette">
         <input type="text" id="search-input" placeholder="Search entries... (Return to launch)" autocomplete="off">
         <div id="search-results"></div>
     </div>
 
+    <!-- Global Application Dynamic Prompt Engine -->
     <div id="prompt-overlay">
         <div class="prompt-card">
             <h3 id="prompt-title">Create Entry</h3>
@@ -368,6 +396,7 @@
         </div>
     </div>
 
+    <!-- Custom System Configurations Window -->
     <div id="settings-modal">
         <div class="settings-group">
             <span class="settings-label">Typography Core</span>
@@ -394,6 +423,7 @@
         <button class="widget-btn" style="width:100%; margin-top:10px;" onclick="toggleSettings(false)">Close Panel</button>
     </div>
 
+    <!-- UI Interaction Utilities Block -->
     <div id="corner-widgets">
         <button class="widget-btn" onclick="toggleSettings(true)">Config</button>
     </div>
@@ -405,13 +435,18 @@
             config: { theme: 'maroon', font: 'sans' }
         };
 
-        const GRID = 20; // Snap-to-grid spacing constraint variables
+        const GRID = 20; 
         let currentTargetFolderId = null; 
         let activeDragElement = null;
         let dragOffset = { x: 0, y: 0 };
         let searchIndex = 0;
 
-        // Initialize App State Memory Instance
+        // Coordinates tracking for right-click positioning
+        let spawnCoordinates = { x: 40, y: 40 };
+
+        // Single window navigation history stack
+        let folderHistoryStack = [];
+
         function initMemory() {
             const stored = localStorage.getItem('BOOKBAR_DATA');
             if (stored) {
@@ -421,7 +456,6 @@
                     console.error("Memory corrupted, resetting layout.", e);
                 }
             } else {
-                // Seed values if storage is dry
                 state.items = [
                     { id: '1', type: 'folder', label: 'Development', x: 40, y: 40, parentId: null },
                     { id: '2', type: 'link', label: 'GitHub', url: 'https://github.com', x: 40, y: 160, parentId: null }
@@ -458,7 +492,6 @@
         }
 
         function renderCanvas() {
-            // Flush elements outside active system windows
             const rootItems = canvas.querySelectorAll('.desktop-item');
             rootItems.forEach(el => el.remove());
 
@@ -494,18 +527,17 @@
             });
         }
 
-        // --- INTERACTION / DRAG CONTROLS LOGIC ---
+        // --- INTERACTION & DRAG-AND-DROP TO FOLDER LOGIC ---
         function attachItemEvents(el, item) {
             el.addEventListener('contextmenu', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                // Right click options block inside custom context menu injection
                 showDeleteMenu(e, item.id);
             });
 
             el.addEventListener('mousedown', (e) => {
-                if (e.button !== 0) return; // Main click execution path verification
-                if (el.style.position === 'relative') return; // Do not isolate elements inside nested modular screens
+                if (e.button !== 0) return; 
+                if (el.style.position === 'relative') return; // Ignore drag within active folder windows
                 e.stopPropagation();
                 activeDragElement = item;
                 const rect = el.getBoundingClientRect();
@@ -521,7 +553,16 @@
             el.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
                 if (item.type === 'folder') {
-                    launchFolderWindow(item.id, item.label);
+                    // Check if window is already open
+                    const singleWin = document.getElementById('single-system-window');
+                    if (singleWin) {
+                        // Navigate INSIDE current window
+                        folderHistoryStack.push(item.id);
+                        updateWindowView(item.id);
+                    } else {
+                        // Open new single window container
+                        launchFolderWindow(item.id);
+                    }
                 } else {
                     window.open(item.url, '_blank', 'noopener,noreferrer');
                 }
@@ -538,77 +579,139 @@
 
             el.style.left = `${targetX}px`;
             el.style.top = `${targetY}px`;
+
+            // Detect drag hovering over folders on desktop canvas
+            document.querySelectorAll('.desktop-item.item-folder').forEach(folderEl => {
+                if (folderEl.id === `item-${activeDragElement.id}`) return;
+                const rect = folderEl.getBoundingClientRect();
+                if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                    e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                    folderEl.classList.add('drop-hover');
+                } else {
+                    folderEl.classList.remove('drop-hover');
+                }
+            });
         });
 
         window.addEventListener('mouseup', (e) => {
             if (!activeDragElement) return;
             const el = document.getElementById(`item-${activeDragElement.id}`);
             if (el) {
-                // Hard coordinate calculations snapping parameters constraints logic loop
-                let rawX = parseInt(el.style.left);
-                let rawY = parseInt(el.style.top);
+                let droppedIntoFolder = false;
 
-                let snappedX = Math.round(rawX / GRID) * GRID;
-                let snappedY = Math.round(rawY / GRID) * GRID;
+                // Detect if dropped on top of a folder
+                document.querySelectorAll('.desktop-item.item-folder').forEach(folderEl => {
+                    folderEl.classList.remove('drop-hover');
+                    if (droppedIntoFolder || folderEl.id === `item-${activeDragElement.id}`) return;
+                    
+                    const rect = folderEl.getBoundingClientRect();
+                    if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                        e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                        
+                        const targetFolderId = folderEl.id.replace('item-', '');
+                        activeDragElement.parentId = targetFolderId;
+                        saveMemory();
+                        droppedIntoFolder = true;
+                        renderCanvas();
 
-                // Canvas boundaries containment checks
-                if(snappedX < 0) snappedX = 0;
-                if(snappedY < 0) snappedY = 0;
+                        // Refresh window content if folder is open
+                        const openContent = document.getElementById(`win-content-${targetFolderId}`);
+                        if (openContent) renderWindowContent(targetFolderId, openContent);
+                    }
+                });
 
-                el.style.left = `${snappedX}px`;
-                el.style.top = `${snappedY}px`;
-                el.style.zIndex = 2;
+                if (!droppedIntoFolder) {
+                    let rawX = parseInt(el.style.left);
+                    let rawY = parseInt(el.style.top);
 
-                activeDragElement.x = snappedX;
-                activeDragElement.y = snappedY;
-                saveMemory();
+                    let snappedX = Math.round(rawX / GRID) * GRID;
+                    let snappedY = Math.round(rawY / GRID) * GRID;
+
+                    if(snappedX < 0) snappedX = 0;
+                    if(snappedY < 0) snappedY = 0;
+
+                    el.style.left = `${snappedX}px`;
+                    el.style.top = `${snappedY}px`;
+                    el.style.zIndex = 2;
+
+                    activeDragElement.x = snappedX;
+                    activeDragElement.y = snappedY;
+                    saveMemory();
+                }
             }
             activeDragElement = null;
         });
 
-        // --- NESTED MODULAR SYSTEM WINDOW ACTIONS ---
-        function launchFolderWindow(folderId, label) {
-            const existingWin = document.getElementById(`win-${folderId}`);
-            if (existingWin) {
-                existingWin.style.zIndex = 100;
-                return;
-            }
+        // --- SINGLE-WINDOW NAVIGATION SYSTEM ---
+        function launchFolderWindow(initialFolderId) {
+            closeActiveWindow(); // Ensure single active window
+
+            folderHistoryStack = [initialFolderId];
 
             const win = document.createElement('div');
             win.className = 'window';
-            win.id = `win-${folderId}`;
-            win.style.left = `${200 + (state.items.filter(i=>i.type==='folder').length * 15)}px`;
-            win.style.top = `${150 + (state.items.filter(i=>i.type==='folder').length * 15)}px`;
+            win.id = 'single-system-window';
+            win.style.left = '25%';
+            win.style.top = '15%';
 
             win.innerHTML = `
                 <div class="window-header">
-                    <span class="window-title">${label}</span>
-                    <button class="window-close" onclick="closeFolderWindow('${folderId}')">✕</button>
+                    <div class="window-title-area">
+                        <button class="window-back-btn" id="win-back-btn" style="display:none;" onclick="navigateFolderBack()">← Back</button>
+                        <span class="window-title" id="win-title-text"></span>
+                    </div>
+                    <button class="window-close" onclick="closeActiveWindow()">✕</button>
                 </div>
-                <div class="window-content" id="win-content-${folderId}"></div>
+                <div class="window-content" id="single-win-content"></div>
             `;
 
             win.addEventListener('contextmenu', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                currentTargetFolderId = folderId;
+                const currentFolder = folderHistoryStack[folderHistoryStack.length - 1];
+                currentTargetFolderId = currentFolder;
                 showContextMenu(e, true);
             });
 
-            win.addEventListener('mousedown', () => {
-                // Focus layered window layout priority stack order adjustments
-                document.querySelectorAll('.window').forEach(w => w.style.zIndex = 10);
-                win.style.zIndex = 11;
+            win.addEventListener('mousedown', (e) => {
+                e.stopPropagation(); // Keep clicks inside window from closing it
             });
 
             setupWindowDrag(win);
             document.body.appendChild(win);
-            renderWindowContent(folderId, document.getElementById(`win-content-${folderId}`));
+            updateWindowView(initialFolderId);
         }
 
-        function closeFolderWindow(id) {
-            const win = document.getElementById(`win-${id}`);
+        function updateWindowView(folderId) {
+            const folderObj = state.items.find(i => i.id === folderId);
+            if (!folderObj) return;
+
+            document.getElementById('win-title-text').innerText = folderObj.label;
+            
+            const backBtn = document.getElementById('win-back-btn');
+            if (folderHistoryStack.length > 1) {
+                backBtn.style.display = 'inline-block';
+            } else {
+                backBtn.style.display = 'none';
+            }
+
+            const contentEl = document.getElementById('single-win-content');
+            contentEl.id = `win-content-${folderId}`;
+            renderWindowContent(folderId, contentEl);
+        }
+
+        function navigateFolderBack() {
+            if (folderHistoryStack.length > 1) {
+                folderHistoryStack.pop();
+                const previousFolderId = folderHistoryStack[folderHistoryStack.length - 1];
+                updateWindowView(previousFolderId);
+            }
+        }
+
+        function closeActiveWindow() {
+            const win = document.getElementById('single-system-window');
             if (win) win.remove();
+            folderHistoryStack = [];
         }
 
         function setupWindowDrag(win) {
@@ -620,8 +723,6 @@
                 isDraggingWin = true;
                 winOffset.x = e.clientX - win.offsetLeft;
                 winOffset.y = e.clientY - win.offsetTop;
-                document.querySelectorAll('.window').forEach(w => w.style.zIndex = 10);
-                win.style.zIndex = 11;
             });
 
             window.addEventListener('mousemove', (e) => {
@@ -633,17 +734,29 @@
             window.addEventListener('mouseup', () => { isDraggingWin = false; });
         }
 
-        // --- NATIVE INTERACTION CONTROLLER CONTEXT MENUS ---
+        // --- CONTEXT MENUS & OUTSIDE-CLICK AUTO CLOSE ---
         const contextMenu = document.getElementById('context-menu');
         
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             currentTargetFolderId = null; 
+
+            // Save raw click location for precise element spawning
+            let snappedX = Math.round(e.clientX / GRID) * GRID;
+            let snappedY = Math.round(e.clientY / GRID) * GRID;
+            spawnCoordinates = { x: snappedX, y: snappedY };
+
             showContextMenu(e, false);
         });
 
-        window.addEventListener('click', () => { 
+        // Click anywhere to dismiss context menu or active window
+        window.addEventListener('click', (e) => { 
             contextMenu.style.display = 'none'; 
+            
+            // Auto close pop-up window when clicking empty canvas space
+            if (!e.target.closest('.window') && !e.target.closest('.desktop-item')) {
+                closeActiveWindow();
+            }
         });
 
         function showContextMenu(e, isInsideWindow) {
@@ -690,10 +803,13 @@
                 
                 renderCanvas();
                 if (item.parentId) {
-                    renderWindowContent(item.parentId, document.getElementById(`win-content-${item.parentId}`));
+                    const contentEl = document.getElementById(`win-content-${item.parentId}`);
+                    if (contentEl) renderWindowContent(item.parentId, contentEl);
                 }
-                const activeWin = document.getElementById(`win-${item.id}`);
-                if (activeWin) activeWin.querySelector('.window-title').innerText = newLabel;
+                const activeWinTitle = document.getElementById('win-title-text');
+                if (activeWinTitle && folderHistoryStack[folderHistoryStack.length - 1] === item.id) {
+                    activeWinTitle.innerText = newLabel;
+                }
             };
         }
 
@@ -701,14 +817,12 @@
             state.items = state.items.filter(i => i.id !== id && i.parentId !== id);
             saveMemory();
             renderCanvas();
-            closeFolderWindow(id);
-            state.items.filter(i => i.type === 'folder').forEach(f => {
-                const contentEl = document.getElementById(`win-content-${f.id}`);
-                if(contentEl) renderWindowContent(f.id, contentEl);
-            });
+            if (folderHistoryStack.includes(id)) {
+                closeActiveWindow();
+            }
         }
 
-        // --- BUILD ENTRY PROMPT MANAGEMENT DIALOG ---
+        // --- PROMPT ENGINE ---
         const promptOverlay = document.getElementById('prompt-overlay');
         const promptTitle = document.getElementById('prompt-title');
         const promptIn1 = document.getElementById('prompt-input-1');
@@ -725,7 +839,6 @@
             promptIn1.value = '';
             promptIn2.value = '';
 
-            // Restore the native click listener behavior for default execution paths
             promptConfirm.onclick = executeCreation;
 
             if (type === 'folder') {
@@ -752,7 +865,7 @@
             if (!label) return;
 
             const newId = Date.now().toString();
-            let parent = activePromptInsideWindow ? currentTargetFolderId : null;
+            let parent = activePromptInsideWindow ? folderHistoryStack[folderHistoryStack.length - 1] : null;
 
             if (activePromptType === 'link') {
                 if (!url) return;
@@ -764,8 +877,8 @@
                 type: activePromptType,
                 label: label,
                 parentId: parent,
-                x: 60,
-                y: 60
+                x: parent ? 0 : spawnCoordinates.x,
+                y: parent ? 0 : spawnCoordinates.y
             };
 
             if (activePromptType === 'link') newItem.url = url;
@@ -775,7 +888,8 @@
             closePrompt();
 
             if (parent) {
-                renderWindowContent(parent, document.getElementById(`win-content-${parent}`));
+                const contentEl = document.getElementById(`win-content-${parent}`);
+                if (contentEl) renderWindowContent(parent, contentEl);
             } else {
                 renderCanvas();
             }
@@ -866,7 +980,7 @@
         function triggerSearchSelection(item) {
             closeSearchPalette();
             if (item.type === 'folder') {
-                launchFolderWindow(item.id, item.label);
+                launchFolderWindow(item.id);
             } else {
                 window.open(item.url, '_blank', 'noopener,noreferrer');
             }
@@ -874,7 +988,7 @@
 
         function closeSearchPalette() { searchPalette.style.display = 'none'; }
 
-        // --- BACKUP CONFIGURATION DATA ENGINE ---
+        // --- BACKUP & SETTINGS DATA ENGINE ---
         function toggleSettings(show) {
             document.getElementById('settings-modal').style.display = show ? 'block' : 'none';
         }
@@ -906,7 +1020,7 @@
                         saveMemory();
                         applyConfig();
                         renderCanvas();
-                        document.querySelectorAll('.window').forEach(w => w.remove());
+                        closeActiveWindow();
                         toggleSettings(false);
                     } else {
                         alert("Malformed data architectural mapping signature.");
