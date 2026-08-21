@@ -50,7 +50,7 @@
             height: 100vh;
         }
 
-        /* Canvas Grid Visualizer (Subtle alignment dots) */
+        /* Canvas Grid Visualizer */
         #desktop-canvas {
             position: relative;
             width: 100%;
@@ -206,6 +206,17 @@
             grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
             grid-gap: 16px;
             align-content: start;
+            position: relative;
+        }
+
+        /* Drag Ghost Proxy */
+        #drag-proxy {
+            position: fixed;
+            pointer-events: none;
+            z-index: 2000;
+            display: none;
+            opacity: 0.85;
+            transform: translate(-50%, -50%);
         }
 
         /* --- CONTEXT MENU --- */
@@ -369,6 +380,9 @@
     <!-- Main Active Canvas Layout -->
     <div id="desktop-canvas"></div>
 
+    <!-- Drag Proxy for Items Dragged Out of Window -->
+    <div id="drag-proxy" class="desktop-item"></div>
+
     <!-- Right-Click Action Context Menu -->
     <div id="context-menu">
         <div class="menu-item" onclick="openPrompt('folder')">New Folder</div>
@@ -438,13 +452,11 @@
         const GRID = 20; 
         let currentTargetFolderId = null; 
         let activeDragElement = null;
+        let isDraggingFromWindow = false;
         let dragOffset = { x: 0, y: 0 };
         let searchIndex = 0;
 
-        // Coordinates tracking for right-click positioning
         let spawnCoordinates = { x: 40, y: 40 };
-
-        // Single window navigation history stack
         let folderHistoryStack = [];
 
         function initMemory() {
@@ -481,6 +493,7 @@
 
         // --- CORE UI RENDERING ENGINE ---
         const canvas = document.getElementById('desktop-canvas');
+        const dragProxy = document.getElementById('drag-proxy');
 
         function generateIconHTML(item) {
             if (item.type === 'folder') {
@@ -503,7 +516,7 @@
                 el.style.top = `${item.y}px`;
                 el.innerHTML = generateIconHTML(item);
                 
-                attachItemEvents(el, item);
+                attachItemEvents(el, item, false);
                 canvas.appendChild(el);
             });
         }
@@ -521,14 +534,15 @@
                 el.style.position = 'relative';
                 el.style.left = '0px';
                 el.style.top = '0px';
+                el.id = `item-${item.id}`;
                 el.innerHTML = generateIconHTML(item);
-                attachItemEvents(el, item);
+                attachItemEvents(el, item, true);
                 contentEl.appendChild(el);
             });
         }
 
-        // --- INTERACTION & DRAG-AND-DROP TO FOLDER LOGIC ---
-        function attachItemEvents(el, item) {
+        // --- INTERACTION & DRAG-AND-DROP LOGIC ---
+        function attachItemEvents(el, item, insideWindow = false) {
             el.addEventListener('contextmenu', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -537,13 +551,23 @@
 
             el.addEventListener('mousedown', (e) => {
                 if (e.button !== 0) return; 
-                if (el.style.position === 'relative') return; // Ignore drag within active folder windows
                 e.stopPropagation();
                 activeDragElement = item;
+                isDraggingFromWindow = insideWindow;
+
                 const rect = el.getBoundingClientRect();
                 dragOffset.x = e.clientX - rect.left;
                 dragOffset.y = e.clientY - rect.top;
-                el.style.zIndex = 1000;
+
+                if (insideWindow) {
+                    dragProxy.className = `desktop-item item-${item.type}`;
+                    dragProxy.innerHTML = generateIconHTML(item);
+                    dragProxy.style.display = 'flex';
+                    dragProxy.style.left = `${e.clientX}px`;
+                    dragProxy.style.top = `${e.clientY}px`;
+                } else {
+                    el.style.zIndex = 1000;
+                }
             });
 
             el.addEventListener('click', (e) => {
@@ -553,14 +577,11 @@
             el.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
                 if (item.type === 'folder') {
-                    // Check if window is already open
                     const singleWin = document.getElementById('single-system-window');
                     if (singleWin) {
-                        // Navigate INSIDE current window
                         folderHistoryStack.push(item.id);
                         updateWindowView(item.id);
                     } else {
-                        // Open new single window container
                         launchFolderWindow(item.id);
                     }
                 } else {
@@ -571,80 +592,120 @@
 
         window.addEventListener('mousemove', (e) => {
             if (!activeDragElement) return;
-            const el = document.getElementById(`item-${activeDragElement.id}`);
-            if (!el) return;
 
-            let targetX = e.clientX - dragOffset.x;
-            let targetY = e.clientY - dragOffset.y;
+            if (isDraggingFromWindow) {
+                dragProxy.style.left = `${e.clientX}px`;
+                dragProxy.style.top = `${e.clientY}px`;
+            } else {
+                const el = document.getElementById(`item-${activeDragElement.id}`);
+                if (!el) return;
 
-            el.style.left = `${targetX}px`;
-            el.style.top = `${targetY}px`;
+                let targetX = e.clientX - dragOffset.x;
+                let targetY = e.clientY - dragOffset.y;
 
-            // Detect drag hovering over folders on desktop canvas
-            document.querySelectorAll('.desktop-item.item-folder').forEach(folderEl => {
-                if (folderEl.id === `item-${activeDragElement.id}`) return;
-                const rect = folderEl.getBoundingClientRect();
-                if (e.clientX >= rect.left && e.clientX <= rect.right &&
-                    e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                    folderEl.classList.add('drop-hover');
-                } else {
-                    folderEl.classList.remove('drop-hover');
-                }
-            });
+                el.style.left = `${targetX}px`;
+                el.style.top = `${targetY}px`;
+
+                document.querySelectorAll('.desktop-item.item-folder').forEach(folderEl => {
+                    if (folderEl.id === `item-${activeDragElement.id}`) return;
+                    const rect = folderEl.getBoundingClientRect();
+                    if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                        e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                        folderEl.classList.add('drop-hover');
+                    } else {
+                        folderEl.classList.remove('drop-hover');
+                    }
+                });
+            }
         });
 
         window.addEventListener('mouseup', (e) => {
             if (!activeDragElement) return;
-            const el = document.getElementById(`item-${activeDragElement.id}`);
-            if (el) {
-                let droppedIntoFolder = false;
 
-                // Detect if dropped on top of a folder
-                document.querySelectorAll('.desktop-item.item-folder').forEach(folderEl => {
-                    folderEl.classList.remove('drop-hover');
-                    if (droppedIntoFolder || folderEl.id === `item-${activeDragElement.id}`) return;
-                    
-                    const rect = folderEl.getBoundingClientRect();
-                    if (e.clientX >= rect.left && e.clientX <= rect.right &&
-                        e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                        
-                        const targetFolderId = folderEl.id.replace('item-', '');
-                        activeDragElement.parentId = targetFolderId;
-                        saveMemory();
-                        droppedIntoFolder = true;
-                        renderCanvas();
+            if (isDraggingFromWindow) {
+                dragProxy.style.display = 'none';
+                const activeWin = document.getElementById('single-system-window');
+                let droppedOutsideWin = true;
 
-                        // Refresh window content if folder is open
-                        const openContent = document.getElementById(`win-content-${targetFolderId}`);
-                        if (openContent) renderWindowContent(targetFolderId, openContent);
+                if (activeWin) {
+                    const winRect = activeWin.getBoundingClientRect();
+                    if (e.clientX >= winRect.left && e.clientX <= winRect.right &&
+                        e.clientY >= winRect.top && e.clientY <= winRect.bottom) {
+                        droppedOutsideWin = false;
                     }
-                });
+                }
 
-                if (!droppedIntoFolder) {
-                    let rawX = parseInt(el.style.left);
-                    let rawY = parseInt(el.style.top);
+                if (droppedOutsideWin) {
+                    let snappedX = Math.round((e.clientX - dragOffset.x) / GRID) * GRID;
+                    let snappedY = Math.round((e.clientY - dragOffset.y) / GRID) * GRID;
+                    if (snappedX < 0) snappedX = 0;
+                    if (snappedY < 0) snappedY = 0;
 
-                    let snappedX = Math.round(rawX / GRID) * GRID;
-                    let snappedY = Math.round(rawY / GRID) * GRID;
-
-                    if(snappedX < 0) snappedX = 0;
-                    if(snappedY < 0) snappedY = 0;
-
-                    el.style.left = `${snappedX}px`;
-                    el.style.top = `${snappedY}px`;
-                    el.style.zIndex = 2;
-
+                    const prevParentId = activeDragElement.parentId;
+                    activeDragElement.parentId = null;
                     activeDragElement.x = snappedX;
                     activeDragElement.y = snappedY;
+
                     saveMemory();
+                    renderCanvas();
+
+                    if (prevParentId) {
+                        const contentEl = document.getElementById(`win-content-${prevParentId}`);
+                        if (contentEl) renderWindowContent(prevParentId, contentEl);
+                    }
+                }
+            } else {
+                const el = document.getElementById(`item-${activeDragElement.id}`);
+                if (el) {
+                    let droppedIntoFolder = false;
+
+                    document.querySelectorAll('.desktop-item.item-folder').forEach(folderEl => {
+                        folderEl.classList.remove('drop-hover');
+                        if (droppedIntoFolder || folderEl.id === `item-${activeDragElement.id}`) return;
+                        
+                        const rect = folderEl.getBoundingClientRect();
+                        if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                            
+                            const targetFolderId = folderEl.id.replace('item-', '');
+                            activeDragElement.parentId = targetFolderId;
+                            saveMemory();
+                            droppedIntoFolder = true;
+                            renderCanvas();
+
+                            const openContent = document.getElementById(`win-content-${targetFolderId}`);
+                            if (openContent) renderWindowContent(targetFolderId, openContent);
+                        }
+                    });
+
+                    if (!droppedIntoFolder) {
+                        let rawX = parseInt(el.style.left);
+                        let rawY = parseInt(el.style.top);
+
+                        let snappedX = Math.round(rawX / GRID) * GRID;
+                        let snappedY = Math.round(rawY / GRID) * GRID;
+
+                        if(snappedX < 0) snappedX = 0;
+                        if(snappedY < 0) snappedY = 0;
+
+                        el.style.left = `${snappedX}px`;
+                        el.style.top = `${snappedY}px`;
+                        el.style.zIndex = 2;
+
+                        activeDragElement.x = snappedX;
+                        activeDragElement.y = snappedY;
+                        saveMemory();
+                    }
                 }
             }
+
             activeDragElement = null;
+            isDraggingFromWindow = false;
         });
 
         // --- SINGLE-WINDOW NAVIGATION SYSTEM ---
         function launchFolderWindow(initialFolderId) {
-            closeActiveWindow(); // Ensure single active window
+            closeActiveWindow();
 
             folderHistoryStack = [initialFolderId];
 
@@ -668,13 +729,12 @@
             win.addEventListener('contextmenu', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                const currentFolder = folderHistoryStack[folderHistoryStack.length - 1];
-                currentTargetFolderId = currentFolder;
+                currentTargetFolderId = folderHistoryStack[folderHistoryStack.length - 1];
                 showContextMenu(e, true);
             });
 
             win.addEventListener('mousedown', (e) => {
-                e.stopPropagation(); // Keep clicks inside window from closing it
+                e.stopPropagation();
             });
 
             setupWindowDrag(win);
@@ -741,7 +801,6 @@
             e.preventDefault();
             currentTargetFolderId = null; 
 
-            // Save raw click location for precise element spawning
             let snappedX = Math.round(e.clientX / GRID) * GRID;
             let snappedY = Math.round(e.clientY / GRID) * GRID;
             spawnCoordinates = { x: snappedX, y: snappedY };
@@ -749,12 +808,9 @@
             showContextMenu(e, false);
         });
 
-        // Click anywhere to dismiss context menu or active window
         window.addEventListener('click', (e) => { 
             contextMenu.style.display = 'none'; 
-            
-            // Auto close pop-up window when clicking empty canvas space
-            if (!e.target.closest('.window') && !e.target.closest('.desktop-item')) {
+            if (!e.target.closest('.window') && !e.target.closest('.desktop-item') && !e.target.closest('#prompt-overlay')) {
                 closeActiveWindow();
             }
         });
@@ -819,6 +875,12 @@
             renderCanvas();
             if (folderHistoryStack.includes(id)) {
                 closeActiveWindow();
+            } else {
+                const activeFolder = folderHistoryStack[folderHistoryStack.length - 1];
+                if (activeFolder) {
+                    const contentEl = document.getElementById(`win-content-${activeFolder}`);
+                    if (contentEl) renderWindowContent(activeFolder, contentEl);
+                }
             }
         }
 
