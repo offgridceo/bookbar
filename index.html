@@ -14,17 +14,13 @@
             --text-main: #e5e5e5;
             --text-muted: #737373;
             
-            /* Accent Themes */
-            --accent-maroon: #800020;
-            --accent-grey: #525252;
-            --accent-neon: #00ff66;
-            --accent-outline: transparent;
-            
-            --accent: var(--accent-maroon);
+            --accent: #800020;
             --folder-border: var(--accent);
             --folder-bg: rgba(128, 0, 32, 0.05);
 
             --grid-size: 100px;
+            --grid-pattern: radial-gradient(var(--border-color) 1px, transparent 1px);
+            --grid-bg-size: 20px 20px;
             --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
@@ -33,11 +29,27 @@
         [data-font="serif"] { --font-stack: Georgia, Cambria, "Times New Roman", Times, serif; }
         [data-font="sans"] { --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 
-        /* Accent Theme Overrides */
-        [data-theme="grey"] { --accent: var(--accent-grey); --folder-bg: rgba(82, 82, 82, 0.1); --folder-border: var(--accent-grey); }
-        [data-theme="neon"] { --accent: var(--accent-neon); --folder-bg: rgba(0, 255, 102, 0.03); --folder-border: var(--accent-neon); }
-        [data-theme="outline"] { --accent: var(--text-main); --folder-bg: transparent; --folder-border: var(--text-muted); }
-        [data-theme="maroon"] { --accent: var(--accent-maroon); --folder-bg: rgba(128, 0, 32, 0.05); --folder-border: var(--accent-maroon); }
+        /* --- 20 DISTINCT THEME PRESETS --- */
+        [data-theme="maroon"] { --bg-base: #0a0a0a; --bg-surface: #121212; --bg-element: #1a1a1a; --border-color: #262626; --text-main: #e5e5e5; --text-muted: #737373; --accent: #800020; --folder-bg: rgba(128, 0, 32, 0.08); --folder-border: #800020; --grid-pattern: radial-gradient(#262626 1px, transparent 1px); }
+        [data-theme="grey"] { --bg-base: #0f0f0f; --bg-surface: #181818; --bg-element: #222222; --border-color: #333333; --text-main: #d4d4d4; --text-muted: #666666; --accent: #525252; --folder-bg: rgba(82, 82, 82, 0.1); --folder-border: #525252; --grid-pattern: radial-gradient(#333333 1px, transparent 1px); }
+        [data-theme="neon"] { --bg-base: #050b07; --bg-surface: #0a140d; --bg-element: #102015; --border-color: #1a3821; --text-main: #00ff66; --text-muted: #008033; --accent: #00ff66; --folder-bg: rgba(0, 255, 102, 0.05); --folder-border: #00ff66; --grid-pattern: radial-gradient(#1a3821 1px, transparent 1px); }
+        [data-theme="outline"] { --bg-base: #000000; --bg-surface: #0d0d0d; --bg-element: #171717; --border-color: #404040; --text-main: #ffffff; --text-muted: #737373; --accent: #ffffff; --folder-bg: transparent; --folder-border: #737373; --grid-pattern: radial-gradient(#404040 1px, transparent 1px); }
+        [data-theme="cyberpunk"] { --bg-base: #0d021a; --bg-surface: #17052e; --bg-element: #240847; --border-color: #470d8a; --text-main: #ff007f; --text-muted: #8c00ed; --accent: #00f0ff; --folder-bg: rgba(0, 240, 255, 0.08); --folder-border: #ff007f; --grid-pattern: linear-gradient(rgba(71, 13, 138, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(71, 13, 138, 0.3) 1px, transparent 1px); }
+        [data-theme="hacker"] { --bg-base: #000000; --bg-surface: #050f05; --bg-element: #0a1f0a; --border-color: #003b00; --text-main: #00ff41; --text-muted: #007a1f; --accent: #00ff41; --folder-bg: rgba(0, 255, 65, 0.05); --folder-border: #00ff41; --grid-pattern: linear-gradient(rgba(0, 59, 0, 0.4) 1px, transparent 1px); }
+        [data-theme="tactical"] { --bg-base: #111411; --bg-surface: #1a1e1a; --bg-element: #242a24; --border-color: #353d35; --text-main: #a3b19b; --text-muted: #5e6859; --accent: #6b7c5d; --folder-bg: rgba(107, 124, 93, 0.1); --folder-border: #6b7c5d; --grid-pattern: radial-gradient(#353d35 1.5px, transparent 1.5px); }
+        [data-theme="coding"] { --bg-base: #1e1e1e; --bg-surface: #252526; --bg-element: #2d2d2d; --border-color: #3e3e42; --text-main: #d4d4d4; --text-muted: #858585; --accent: #007acc; --folder-bg: rgba(0, 122, 204, 0.1); --folder-border: #007acc; --grid-pattern: radial-gradient(#3e3e42 1px, transparent 1px); }
+        [data-theme="pastel"] { --bg-base: #120e16; --bg-surface: #1b1522; --bg-element: #281f33; --border-color: #3e304f; --text-main: #f3d5ec; --text-muted: #9a789c; --accent: #f3a0e2; --folder-bg: rgba(243, 160, 226, 0.08); --folder-border: #f3a0e2; --grid-pattern: radial-gradient(#3e304f 1px, transparent 1px); }
+        [data-theme="glitch"] { --bg-base: #030303; --bg-surface: #0a0a0c; --bg-element: #121217; --border-color: #ff003c; --text-main: #00f6ff; --text-muted: #730029; --accent: #ff003c; --folder-bg: rgba(255, 0, 60, 0.08); --folder-border: #00f6ff; --grid-pattern: linear-gradient(rgba(255, 0, 60, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 246, 255, 0.2) 1px, transparent 1px); }
+        [data-theme="pulse"] { --bg-base: #060514; --bg-surface: #0d0a26; --bg-element: #16123d; --border-color: #2b226e; --text-main: #b8adff; --text-muted: #5e52a8; --accent: #7a5cff; --folder-bg: rgba(122, 92, 255, 0.1); --folder-border: #7a5cff; --grid-pattern: radial-gradient(#2b226e 1px, transparent 1px); }
+        [data-theme="amber"] { --bg-base: #0d0800; --bg-surface: #170e00; --bg-element: #241600; --border-color: #422800; --text-main: #ffb000; --text-muted: #855c00; --accent: #ffb000; --folder-bg: rgba(255, 176, 0, 0.08); --folder-border: #ffb000; --grid-pattern: linear-gradient(rgba(66, 40, 0, 0.4) 1px, transparent 1px); }
+        [data-theme="minimal-mono"] { --bg-base: #ffffff; --bg-surface: #f4f4f5; --bg-element: #e4e4e7; --border-color: #d4d4d8; --text-main: #09090b; --text-muted: #71717a; --accent: #09090b; --folder-bg: rgba(9, 9, 11, 0.05); --folder-border: #09090b; --grid-pattern: radial-gradient(#d4d4d8 1px, transparent 1px); }
+        [data-theme="crimson"] { --bg-base: #0f0505; --bg-surface: #1a0a0a; --bg-element: #291010; --border-color: #471c1c; --text-main: #ff8080; --text-muted: #8a3636; --accent: #ff3333; --folder-bg: rgba(255, 51, 51, 0.08); --folder-border: #ff3333; --grid-pattern: radial-gradient(#471c1c 1px, transparent 1px); }
+        [data-theme="nord"] { --bg-base: #2e3440; --bg-surface: #3b4252; --bg-element: #434c5e; --border-color: #4c566a; --text-main: #eceff4; --text-muted: #d8dee9; --accent: #88c0d0; --folder-bg: rgba(136, 192, 208, 0.1); --folder-border: #88c0d0; --grid-pattern: radial-gradient(#4c566a 1px, transparent 1px); }
+        [data-theme="dracula"] { --bg-base: #282a36; --bg-surface: #343746; --bg-element: #44475a; --border-color: #6272a4; --text-main: #f8f8f2; --text-muted: #6272a4; --accent: #ff79c6; --folder-bg: rgba(255, 121, 198, 0.1); --folder-border: #bd93f9; --grid-pattern: radial-gradient(#6272a4 1px, transparent 1px); }
+        [data-theme="midnight"] { --bg-base: #020617; --bg-surface: #0f172a; --bg-element: #1e293b; --border-color: #334155; --text-main: #f8fafc; --text-muted: #64748b; --accent: #38bdf8; --folder-bg: rgba(56, 189, 248, 0.08); --folder-border: #38bdf8; --grid-pattern: radial-gradient(#334155 1px, transparent 1px); }
+        [data-theme="emerald"] { --bg-base: #022c22; --bg-surface: #064e3b; --bg-element: #047857; --border-color: #059669; --text-main: #ecfdf5; --text-muted: #6ee7b7; --accent: #10b981; --folder-bg: rgba(16, 185, 129, 0.12); --folder-border: #34d399; --grid-pattern: radial-gradient(#059669 1px, transparent 1px); }
+        [data-theme="solarized"] { --bg-base: #002b36; --bg-surface: #073642; --bg-element: #586e75; --border-color: #657b83; --text-main: #fdf6e3; --text-muted: #93a1a1; --accent: #b58900; --folder-bg: rgba(181, 137, 0, 0.15); --folder-border: #cb4b16; --grid-pattern: radial-gradient(#657b83 1px, transparent 1px); }
+        [data-theme="synthwave"] { --bg-base: #1a102f; --bg-surface: #241744; --bg-element: #32205d; --border-color: #4b3080; --text-main: #ffe600; --text-muted: #a670ff; --accent: #ff007f; --folder-bg: rgba(255, 0, 127, 0.12); --folder-border: #00f0ff; --grid-pattern: linear-gradient(rgba(75, 48, 128, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(75, 48, 128, 0.4) 1px, transparent 1px); }
 
         /* --- BASE STYLES --- */
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -55,8 +67,8 @@
             position: relative;
             width: 100%;
             height: 100%;
-            background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-image: var(--grid-pattern);
+            background-size: var(--grid-bg-size);
         }
 
         /* --- DESKTOP ITEMS (ICONS) --- */
@@ -227,7 +239,7 @@
             border: 1px solid var(--border-color);
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             z-index: 100;
-            width: 160px;
+            width: 170px;
             padding: 4px 0;
             border-radius: 4px;
         }
@@ -343,7 +355,7 @@
             border-radius: 4px;
         }
 
-        /* Global Overlay Form for Creation Inputs */
+        /* Global Overlay Form for Creation / Credentials Inputs */
         #prompt-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -369,10 +381,10 @@
             padding: 8px;
             font-size: 13px;
             outline: none;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             border-radius: 4px;
         }
-        .prompt-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+        .prompt-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -421,12 +433,28 @@
             </select>
         </div>
         <div class="settings-group">
-            <span class="settings-label">Visual Theme / Accent Variant</span>
+            <span class="settings-label">Visual Theme / Preset Variant</span>
             <select id="setting-theme" class="settings-select" onchange="updateTheme(this.value)">
-                <option value="maroon">Signature Maroon</option>
-                <option value="grey">Muted Charcoal</option>
-                <option value="neon">Matrix Neon</option>
-                <option value="outline">Raw Architecture</option>
+                <option value="maroon">01. Signature Maroon</option>
+                <option value="grey">02. Muted Charcoal</option>
+                <option value="neon">03. Matrix Neon</option>
+                <option value="outline">04. Raw Architecture</option>
+                <option value="cyberpunk">05. Cyberpunk Neon</option>
+                <option value="hacker">06. Hacker Terminal</option>
+                <option value="tactical">07. Tactical Slate</option>
+                <option value="coding">08. VS Code Dark</option>
+                <option value="pastel">09. Pastel Vamp</option>
+                <option value="glitch">10. Chromatic Glitch</option>
+                <option value="pulse">11. Violet Pulse</option>
+                <option value="amber">12. Amber CRT Arcade</option>
+                <option value="minimal-mono">13. Minimal Light Mono</option>
+                <option value="crimson">14. Crimson Deep</option>
+                <option value="nord">15. Nord Ice</option>
+                <option value="dracula">16. Dracula Synth</option>
+                <option value="midnight">17. Midnight Slate</option>
+                <option value="emerald">18. Emerald Vault</option>
+                <option value="solarized">19. Solarized Dark</option>
+                <option value="synthwave">20. Synthwave 84</option>
             </select>
         </div>
         <div style="display:flex; gap:10px; margin-top:24px;">
@@ -801,10 +829,10 @@
             window.addEventListener('mouseup', () => { isDraggingWin = false; });
         }
 
-        // --- CONTEXT MENUS & OUTSIDE-CLICK AUTO CLOSE ---
+        // --- CONTEXT MENUS & SMART CLIPBOARD PASTE ---
         const contextMenu = document.getElementById('context-menu');
         
-        window.addEventListener('contextmenu', (e) => {
+        window.addEventListener('contextmenu', async (e) => {
             e.preventDefault();
             creationTargetParentId = null; 
 
@@ -812,7 +840,17 @@
             let snappedY = Math.round(e.clientY / GRID) * GRID;
             spawnCoordinates = { x: snappedX, y: snappedY };
 
-            showContextMenu(e, false);
+            let copiedUrl = null;
+            try {
+                const clipText = await navigator.clipboard.readText();
+                if (clipText && /^https?:\/\/[^\s]+$/i.test(clipText.trim())) {
+                    copiedUrl = clipText.trim();
+                }
+            } catch(err) {
+                // Clipboard permissions disabled or unreadable
+            }
+
+            showContextMenu(e, false, copiedUrl);
         });
 
         window.addEventListener('click', (e) => { 
@@ -822,12 +860,18 @@
             }
         });
 
-        function showContextMenu(e, isInsideWindow) {
+        function showContextMenu(e, isInsideWindow, pastedUrl = null) {
             contextMenu.style.display = 'block';
             contextMenu.style.left = `${e.clientX}px`;
             contextMenu.style.top = `${e.clientY}px`;
             
+            let pasteOptionHTML = '';
+            if (pastedUrl) {
+                pasteOptionHTML = `<div class="menu-item" style="color:var(--accent);" onclick="quickPasteBookmark('${pastedUrl}', ${isInsideWindow})">Paste Bookmark</div><div class="menu-separator"></div>`;
+            }
+
             contextMenu.innerHTML = `
+                ${pasteOptionHTML}
                 <div class="menu-item" onclick="openPrompt('folder', ${isInsideWindow})">New Folder</div>
                 <div class="menu-item" onclick="openPrompt('link', ${isInsideWindow})">New Bookmark</div>
                 <div class="menu-separator"></div>
@@ -835,15 +879,88 @@
             `;
         }
 
+        function quickPasteBookmark(url, insideWindow) {
+            let domainLabel = 'New Bookmark';
+            try {
+                domainLabel = new URL(url).hostname.replace('www.', '');
+            } catch(e) {}
+
+            const newId = Date.now().toString();
+            let parent = insideWindow ? creationTargetParentId : null;
+
+            const newItem = {
+                id: newId,
+                type: 'link',
+                label: domainLabel,
+                url: url,
+                parentId: parent,
+                x: parent ? 0 : spawnCoordinates.x,
+                y: parent ? 0 : spawnCoordinates.y
+            };
+
+            state.items.push(newItem);
+            saveMemory();
+            
+            if (parent) {
+                const contentEl = document.getElementById('single-win-content');
+                if (contentEl) renderWindowContent(parent, contentEl);
+            } else {
+                renderCanvas();
+            }
+        }
+
         function showDeleteMenu(e, id) {
+            const item = state.items.find(i => i.id === id);
             contextMenu.style.display = 'block';
             contextMenu.style.left = `${e.clientX}px`;
             contextMenu.style.top = `${e.clientY}px`;
+            
+            let credsOptions = '';
+            if (item && item.type === 'link') {
+                credsOptions = `<div class="menu-item" onclick="openCredentialsPrompt('${id}')">Manage Credentials</div>`;
+                if (item.username) {
+                    credsOptions += `<div class="menu-item" onclick="copyCreds('${id}', 'username')">Copy Username</div>`;
+                }
+                if (item.password) {
+                    credsOptions += `<div class="menu-item" onclick="copyCreds('${id}', 'password')">Copy Password</div>`;
+                }
+                credsOptions += `<div class="menu-separator"></div>`;
+            }
+
             contextMenu.innerHTML = `
+                ${credsOptions}
                 <div class="menu-item" onclick="openRenamePrompt('${id}')">Rename Entry</div>
                 <div class="menu-separator"></div>
                 <div class="menu-item" style="color:#ef4444;" onclick="deleteItem('${id}')">Purge Entry</div>
             `;
+        }
+
+        // --- ACCOUNT VAULT & CREDENTIALS ENGINE ---
+        function openCredentialsPrompt(id) {
+            const item = state.items.find(i => i.id === id);
+            if (!item) return;
+
+            promptOverlay.style.display = 'flex';
+            promptTitle.innerText = `Account Vault: ${item.label}`;
+            promptIn1.value = item.username || '';
+            promptIn2.value = item.password || '';
+            promptIn1.placeholder = "Username / Email";
+            promptIn2.placeholder = "Password / Secret Key";
+            promptIn2.style.display = 'block';
+            promptIn1.focus();
+
+            promptConfirm.onclick = function() {
+                item.username = promptIn1.value.trim();
+                item.password = promptIn2.value.trim();
+                saveMemory();
+                closePrompt();
+            };
+        }
+
+        function copyCreds(id, key) {
+            const item = state.items.find(i => i.id === id);
+            if (!item || !item[key]) return;
+            navigator.clipboard.writeText(item[key]);
         }
 
         function openRenamePrompt(id) {
