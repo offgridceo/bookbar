@@ -209,7 +209,7 @@
             position: relative;
         }
 
-        /* Drag Ghost Proxy */
+        /* Drag Proxy for Drag Out */
         #drag-proxy {
             position: fixed;
             pointer-events: none;
@@ -450,7 +450,6 @@
         };
 
         const GRID = 20; 
-        let currentTargetFolderId = null; 
         let activeDragElement = null;
         let isDraggingFromWindow = false;
         let dragOffset = { x: 0, y: 0 };
@@ -458,6 +457,7 @@
 
         let spawnCoordinates = { x: 40, y: 40 };
         let folderHistoryStack = [];
+        let creationTargetParentId = null;
 
         function initMemory() {
             const stored = localStorage.getItem('BOOKBAR_DATA');
@@ -650,8 +650,11 @@
                     renderCanvas();
 
                     if (prevParentId) {
-                        const contentEl = document.getElementById(`win-content-${prevParentId}`);
-                        if (contentEl) renderWindowContent(prevParentId, contentEl);
+                        const activeFolder = folderHistoryStack[folderHistoryStack.length - 1];
+                        if (activeFolder) {
+                            const contentEl = document.getElementById('single-win-content');
+                            if (contentEl) renderWindowContent(activeFolder, contentEl);
+                        }
                     }
                 }
             } else {
@@ -673,8 +676,11 @@
                             droppedIntoFolder = true;
                             renderCanvas();
 
-                            const openContent = document.getElementById(`win-content-${targetFolderId}`);
-                            if (openContent) renderWindowContent(targetFolderId, openContent);
+                            const activeFolder = folderHistoryStack[folderHistoryStack.length - 1];
+                            if (activeFolder === targetFolderId) {
+                                const contentEl = document.getElementById('single-win-content');
+                                if (contentEl) renderWindowContent(targetFolderId, contentEl);
+                            }
                         }
                     });
 
@@ -729,7 +735,8 @@
             win.addEventListener('contextmenu', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                currentTargetFolderId = folderHistoryStack[folderHistoryStack.length - 1];
+                const currentFolder = folderHistoryStack[folderHistoryStack.length - 1];
+                creationTargetParentId = currentFolder;
                 showContextMenu(e, true);
             });
 
@@ -756,7 +763,6 @@
             }
 
             const contentEl = document.getElementById('single-win-content');
-            contentEl.id = `win-content-${folderId}`;
             renderWindowContent(folderId, contentEl);
         }
 
@@ -772,6 +778,7 @@
             const win = document.getElementById('single-system-window');
             if (win) win.remove();
             folderHistoryStack = [];
+            creationTargetParentId = null;
         }
 
         function setupWindowDrag(win) {
@@ -799,7 +806,7 @@
         
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            currentTargetFolderId = null; 
+            creationTargetParentId = null; 
 
             let snappedX = Math.round(e.clientX / GRID) * GRID;
             let snappedY = Math.round(e.clientY / GRID) * GRID;
@@ -810,7 +817,7 @@
 
         window.addEventListener('click', (e) => { 
             contextMenu.style.display = 'none'; 
-            if (!e.target.closest('.window') && !e.target.closest('.desktop-item') && !e.target.closest('#prompt-overlay')) {
+            if (!e.target.closest('.window') && !e.target.closest('.desktop-item') && !e.target.closest('#prompt-overlay') && !e.target.closest('#context-menu') && !e.target.closest('#settings-modal')) {
                 closeActiveWindow();
             }
         });
@@ -858,9 +865,10 @@
                 closePrompt();
                 
                 renderCanvas();
-                if (item.parentId) {
-                    const contentEl = document.getElementById(`win-content-${item.parentId}`);
-                    if (contentEl) renderWindowContent(item.parentId, contentEl);
+                const activeFolder = folderHistoryStack[folderHistoryStack.length - 1];
+                if (activeFolder) {
+                    const contentEl = document.getElementById('single-win-content');
+                    if (contentEl) renderWindowContent(activeFolder, contentEl);
                 }
                 const activeWinTitle = document.getElementById('win-title-text');
                 if (activeWinTitle && folderHistoryStack[folderHistoryStack.length - 1] === item.id) {
@@ -878,7 +886,7 @@
             } else {
                 const activeFolder = folderHistoryStack[folderHistoryStack.length - 1];
                 if (activeFolder) {
-                    const contentEl = document.getElementById(`win-content-${activeFolder}`);
+                    const contentEl = document.getElementById('single-win-content');
                     if (contentEl) renderWindowContent(activeFolder, contentEl);
                 }
             }
@@ -927,7 +935,7 @@
             if (!label) return;
 
             const newId = Date.now().toString();
-            let parent = activePromptInsideWindow ? folderHistoryStack[folderHistoryStack.length - 1] : null;
+            let parent = activePromptInsideWindow ? creationTargetParentId : null;
 
             if (activePromptType === 'link') {
                 if (!url) return;
@@ -950,7 +958,7 @@
             closePrompt();
 
             if (parent) {
-                const contentEl = document.getElementById(`win-content-${parent}`);
+                const contentEl = document.getElementById('single-win-content');
                 if (contentEl) renderWindowContent(parent, contentEl);
             } else {
                 renderCanvas();
